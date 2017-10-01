@@ -79,12 +79,12 @@ defmodule Solution do
 end
 
 defmodule PokerHand do
-  def value(hand) do
-    [hand_type(hand)] ++ (
-      Enum.map(hand, fn(card) -> elem(card, 0)  end)
-      |> Enum.reverse
-    )
-  end
+  #def value(hand) do
+  #  [hand_type(hand)] ++ (
+  #    Enum.map(hand, fn(card) -> elem(card, 0)  end)
+  #    |> Enum.reverse
+  #  )
+  #end
 
   def values(hand) do
     Enum.map(hand, fn(card) -> elem(card, 0) end)
@@ -101,18 +101,18 @@ defmodule PokerHand do
   #
   # So PokerHand.value should pattern match on hand type and take the value directly from the return of those method calls.
 
-  def hand_type(hand) do
-    cond do
-      PokerHand.royal_flush?(hand) -> 10
-      PokerHand.straight_flush?(hand) -> 9
-      PokerHand.four_of_a_kind?(hand) -> 8
-      PokerHand.full_house?(hand) -> 7
-      PokerHand.flush?(hand) -> 6
-      PokerHand.straight?(hand) -> 5
-      PokerHand.three_of_a_kind?(hand) -> 4
-      PokerHand.two_pair?(hand) -> 3
-      PokerHand.one_pair?(hand) -> 2
-      true -> 1
+  def value(hand) do
+    case hand do
+      {true, value} = PokerHand.royal_flush?(hand) -> [10] ++ value
+      {true, value} = PokerHand.straight_flush?(hand) -> [9] ++ value
+      {true, value} = PokerHand.four_of_a_kind?(hand) -> [8] ++ value
+      {true, value} = PokerHand.full_house?(hand) -> [7] ++ value
+      {true, value} = PokerHand.flush?(hand) -> [6] ++ value
+      {true, value} = PokerHand.straight?(hand) -> [5] ++ value
+      {true, value} = PokerHand.three_of_a_kind?(hand) -> [4] ++ value
+      {true, value} = PokerHand.two_pair?(hand) -> [3] ++ value
+      {true, value} = PokerHand.one_pair?(hand) -> [2] ++ value
+      _ -> [1] ++ (values(hand) |> Enum.reverse)
     end
   end
 
@@ -134,31 +134,35 @@ defmodule PokerHand do
 
   def four_of_a_kind?(hand) do
     case hand do
-      [{value, _}, {value, _}, {value, _}, {value, _} | rest] ->
-        {true, [value] ++ (values(rest) |> Enum.reverse)}
-      # TODO: Match when the 4 are at the end of the list
-      true -> {false, []}
+      [{value, _}, {value, _}, {value, _}, {value, _}, {other_value, _}] ->
+        {true, [value, other_value]}
+      [{other_value, _}, {value, _}, {value, _}, {value, _}, {value, _}] ->
+        {true, [value, other_value]}
+      _ -> {false, []}
     end
   end
 
-  # TODO: Redefine full_house? in the new format
-  def full_house?([{value1, _}, {value1, _}, {value1, _}, {value2, _}, {value2, _}]) do
-    true
+  def full_house?(hand) do
+    case hand do
+      [{v1, _}, {v1, _}, {v1, _}, {v2, _}, {v2, _}] -> full_house_value(v1, v2)
+      [{v1, _}, {v1, _}, {v2, _}, {v2, _}, {v2, _}] -> full_house_value(v1, v2)
+      _ -> {false, []}
+    end
   end
 
-  def full_house?([{value1, _}, {value1, _}, {value2, _}, {value2, _}, {value2, _}]) do
-    true
+  def full_house_value(v1, v2) when v1 > v2 do
+    {true, [v1, v2]}
   end
 
-  def full_house?(_) do
-    false
+  def full_house_value(v1, v2) when v1 < v2 do
+    {true, [v2, v1]}
   end
 
   def flush?(hand) do
     case hand do
       [{_, suit}, {_, suit}, {_, suit}, {_, suit}, {_, suit}] ->
         {true, (values(hand) |> Enum.reverse)}
-      true -> {false, []}
+      _ -> {false, []}
     end
   end
 
@@ -166,50 +170,45 @@ defmodule PokerHand do
     case hand do
       [{v1, _}, {v2, _}, {v3, _}, {v4, _}, {v5, _}] when v2==v1+1 and v3==v2+1 and v4==v3+1 and v5==v4+1 ->
         {true, (values(hand) |> Enum.reverse)}
-      true -> {false, []}
+      _ -> {false, []}
     end
   end
 
-  # TODO: Redefine three_of_a_kind? in the new format
-  def three_of_a_kind?([{value, _}, {value, _}, {value, _}, {_, _}, {_, _}]) do
-    true
+  def three_of_a_kind?(hand) do
+    case hand do
+      [{value, _}, {value, _}, {value, _}, {v2, _}, {v3, _}] ->
+        {true, [value] ++ ([v2, v3] |> Enum.sort |> Enum.reverse)}
+      [{v2, _}, {value, _}, {value, _}, {value, _}, {v3, _}] ->
+        {true, [value] ++ ([v2, v3] |> Enum.sort |> Enum.reverse)}
+      [{v2, _}, {v3, _}, {value, _}, {value, _}, {value, _}] ->
+        {true, [value] ++ ([v2, v3] |> Enum.sort |> Enum.reverse)}
+      _ -> {false, []}
+    end
   end
 
-  def three_of_a_kind?([{_, _}, {value, _}, {value, _}, {value, _}, {_, _}]) do
-    true
-  end
-
-  def three_of_a_kind?([{_, _}, {_, _}, {value, _}, {value, _}, {value, _}]) do
-    true
-  end
-
-  def three_of_a_kind?(_) do
-    false
-  end
-
-  # TODO: Redefine two_pair? in the new format
-  def two_pair?([{value1, _}, {value1, _}, {value2, _}, {value2, _}, {_, _}]) do
-    true
-  end
-
-  def two_pair?([{value1, _}, {value1, _}, {_, _}, {value2, _}, {value2, _}]) do
-    true
-  end
-
-  def two_pair?([{_, _}, {value1, _}, {value1, _}, {value2, _}, {value2, _}]) do
-    true
-  end
-
-  def two_pair?(_) do
-    false
+  def two_pair?(hand) do
+    case hand do
+      [{v1, _}, {v1, _}, {v2, _}, {v2, _}, {v3, _}] ->
+        {true, ([v1, v2] |> Enum.sort |> Enum.reverse) ++ [v3]}
+      [{v1, _}, {v1, _}, {v3, _}, {v2, _}, {v2, _}] ->
+        {true, ([v1, v2] |> Enum.sort |> Enum.reverse) ++ [v3]}
+      [{v3, _}, {v1, _}, {v1, _}, {v2, _}, {v2, _}] ->
+        {true, ([v1, v2] |> Enum.sort |> Enum.reverse) ++ [v3]}
+      _ -> {false, []}
+    end
   end
 
   def one_pair?(hand) do
     case hand do
-      [{value, _}, {value, _} | rest] ->
-        {true, [value] ++ (values(rest) |> Enum.reverse)}
-      # TODO: Do the other combos
-      true -> {false, []}
+      [{value, _}, {value, _}, {v2, _}, {v3, _}, {v4, _}] ->
+        {true, [value] ++ ([v2, v3, v4] |> Enum.sort |> Enum.reverse)}
+      [{v2, _}, {value, _}, {value, _}, {v3, _}, {v4, _}] ->
+        {true, [value] ++ ([v2, v3, v4] |> Enum.sort |> Enum.reverse)}
+      [{v2, _}, {v3, _}, {value, _}, {value, _}, {v4, _}] ->
+        {true, [value] ++ ([v2, v3, v4] |> Enum.sort |> Enum.reverse)}
+      [{v2, _}, {v3, _}, {v4, _}, {value, _}, {value, _}] ->
+        {true, [value] ++ ([v2, v3, v4] |> Enum.sort |> Enum.reverse)}
+      _ -> {false, []}
     end
   end
 end
