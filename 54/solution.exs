@@ -8,35 +8,6 @@ defmodule Solution do
     end)
   end
 
-  def debug() do
-    File.stream!("p054_poker.txt")
-    |> Stream.map(fn(line) -> parse_line(line) end)
-    |> Enum.to_list
-    |> Enum.map(&debug_line/1)
-  end
-
-  def debug_line([p1_hand, p2_hand]) do
-    # Print hands
-    print_hand(p1_hand)
-    print_hand(p2_hand)
-
-    # Print winner
-    IO.puts(winner?(p1_hand, p2_hand))
-
-    # Wait for input
-    IO.gets("<Return> to continue")
-  end
-
-  def print_hand(hand) do
-    hand_type = PokerHand.hand_type(hand)
-    hand_string = hand
-    |> Enum.map(&Tuple.to_list/1)
-    |> Enum.map(fn(card) -> Enum.join(card, "") end)
-    |> Enum.join(" ")
-
-    IO.puts(hand_string <> " : " <> Integer.to_string(hand_type))
-  end
-
   def parse_line(line) do
     [parse_hand(String.slice(line, 0..13)), parse_hand(String.slice(line, 15..-1))]
   end
@@ -79,40 +50,22 @@ defmodule Solution do
 end
 
 defmodule PokerHand do
-  #def value(hand) do
-  #  [hand_type(hand)] ++ (
-  #    Enum.map(hand, fn(card) -> elem(card, 0)  end)
-  #    |> Enum.reverse
-  #  )
-  #end
-
   def values(hand) do
     Enum.map(hand, fn(card) -> elem(card, 0) end)
   end
 
-  # TODO: This implementation does not compare two hands of the same type properly.
-  # My plan now is to redefine all the hand-type functions to return {true, value} or {false, []}, where value is the array of values sorted with the hand type's values first.
-  # For example, the hand "8C 8H 10H 10C 10D" is a full house, and would return:
-  # {true, [10, 10, 10, 8, 8]}
-  # The hand "2D 2C 3H 3S AS" is a two-pair and would return:
-  # {true, [3, 3, 2, 2, 14]}
-  # The hand "2D 7C 9H 10D KS" is a high-card hand and full_house? would return:
-  # {false, []}
-  #
-  # So PokerHand.value should pattern match on hand type and take the value directly from the return of those method calls.
-
   def value(hand) do
-    case hand do
-      {true, value} = PokerHand.royal_flush?(hand) -> [10] ++ value
-      {true, value} = PokerHand.straight_flush?(hand) -> [9] ++ value
-      {true, value} = PokerHand.four_of_a_kind?(hand) -> [8] ++ value
-      {true, value} = PokerHand.full_house?(hand) -> [7] ++ value
-      {true, value} = PokerHand.flush?(hand) -> [6] ++ value
-      {true, value} = PokerHand.straight?(hand) -> [5] ++ value
-      {true, value} = PokerHand.three_of_a_kind?(hand) -> [4] ++ value
-      {true, value} = PokerHand.two_pair?(hand) -> [3] ++ value
-      {true, value} = PokerHand.one_pair?(hand) -> [2] ++ value
-      _ -> [1] ++ (values(hand) |> Enum.reverse)
+    cond do
+      elem({match, value} = PokerHand.royal_flush?(hand), 0) -> [10] ++ value
+      elem({match, value} = PokerHand.straight_flush?(hand), 0) -> [9] ++ value
+      elem({match, value} = PokerHand.four_of_a_kind?(hand), 0) -> [8] ++ value
+      elem({match, value} = PokerHand.full_house?(hand), 0) -> [7] ++ value
+      elem({match, value} = PokerHand.flush?(hand), 0) -> [6] ++ value
+      elem({match, value} = PokerHand.straight?(hand), 0) -> [5] ++ value
+      elem({match, value} = PokerHand.three_of_a_kind?(hand), 0) -> [4] ++ value
+      elem({match, value} = PokerHand.two_pair?(hand), 0) -> [3] ++ value
+      elem({match, value} = PokerHand.one_pair?(hand), 0) -> [2] ++ value
+      true -> [1] ++ (values(hand) |> Enum.reverse)
     end
   end
 
@@ -125,10 +78,10 @@ defmodule PokerHand do
   end
 
   def straight_flush?(hand) do
-    cond do
-      straight?(hand) and flush?(hand) ->
-        {true, values(hand) |> Enum.reverse}
-      true -> {false, []}
+    case hand do
+      [{v1, suit}, {v2, suit}, {v3, suit}, {v4, suit}, {v5, suit}] when v2==v1+1 and v3==v2+1 and v4==v3+1 and v5==v4+1 ->
+        {true, (values(hand) |> Enum.reverse)}
+      _ -> {false, []}
     end
   end
 
