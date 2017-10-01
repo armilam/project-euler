@@ -8,6 +8,35 @@ defmodule Solution do
     end)
   end
 
+  def debug() do
+    File.stream!("p054_poker.txt")
+    |> Stream.map(fn(line) -> parse_line(line) end)
+    |> Enum.to_list
+    |> Enum.map(&debug_line/1)
+  end
+
+  def debug_line([p1_hand, p2_hand]) do
+    # Print hands
+    print_hand(p1_hand)
+    print_hand(p2_hand)
+
+    # Print winner
+    IO.puts(winner?(p1_hand, p2_hand))
+
+    # Wait for input
+    IO.gets("<Return> to continue")
+  end
+
+  def print_hand(hand) do
+    hand_type = PokerHand.hand_type(hand)
+    hand_string = hand
+    |> Enum.map(&Tuple.to_list/1)
+    |> Enum.map(fn(card) -> Enum.join(card, "") end)
+    |> Enum.join(" ")
+
+    IO.puts(hand_string <> " : " <> Integer.to_string(hand_type))
+  end
+
   def parse_line(line) do
     [parse_hand(String.slice(line, 0..13)), parse_hand(String.slice(line, 15..-1))]
   end
@@ -20,7 +49,7 @@ defmodule Solution do
   end
 
   def parse_card(card) do
-    {parse_value(String.slice(card, 0..0)), String.slice(card, 1..1)} # parse_suit(String.slice(card, 1..1))}
+    {parse_value(String.slice(card, 0..0)), String.slice(card, 1..1)}
   end
 
   def parse_suit(suit) do
@@ -56,6 +85,15 @@ defmodule PokerHand do
       |> Enum.reverse
     )
   end
+
+  # TODO: This implementation does not compare two hands of the same type properly.
+  # My plan now is to redefine all the hand-type functions to return {true, value} or {false, 0}, where value is the array of values sorted with the hand type's values first.
+  # For example, the hand "8C 8H 10H 10C 10D" is a full house, and would return:
+  # {true, [10, 10, 10, 8, 8]}
+  # The hand "2D 2C 3H 3S AS" is a two-pair and would return:
+  # {true, [3, 3, 2, 2, 14]}
+  # The hand "2D 7C 9H 10D KS" is a high-card hand and full_house? would return:
+  # {false, 0}
 
   def hand_type(hand) do
     cond do
